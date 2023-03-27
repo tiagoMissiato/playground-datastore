@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id 'kotlin-kapt'
-    id 'com.google.dagger.hilt.android'
 }
 
 android {
@@ -39,7 +37,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.4.0'
+        kotlinCompilerExtensionVersion libs.versions.androidxComposeCompiler.get()
     }
     packagingOptions {
         resources {
@@ -58,15 +56,7 @@ dependencies {
     implementation libs.androidx.compose.ui.tooling
     implementation libs.androidx.compose.material
 
-    implementation "androidx.datastore:datastore-preferences:1.0.0"
-    implementation "androidx.datastore:datastore:1.0.0"
-
-    implementation 'com.squareup.moshi:moshi:1.8.0'
-    kapt 'com.squareup.moshi:moshi-kotlin-codegen:1.8.0'
-
-    //hilt
-    implementation "com.google.dagger:hilt-android:2.44.2"
-    kapt "com.google.dagger:hilt-compiler:2.44.2"
+    implementation libs.androidx.datastore.preferences
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.test.ext.junit
