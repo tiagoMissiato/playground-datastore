@@ -5,7 +5,10 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
@@ -17,20 +20,29 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.SharedPreferencesMigration
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.lifecycleScope
+import androidx.datastore.dataStore
+import androidx.datastore.migrations.SharedPreferencesMigration
+import androidx.datastore.migrations.SharedPreferencesView
 import com.tiagomissiato.playgrounddatastore.ui.theme.PlaygroundDatastoreTheme
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.handleCoroutineException
 import kotlinx.coroutines.launch
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "datastore_preferences",
+val Context.dataStore: DataStore<Settings> by dataStore(
+    fileName = "settings_proto",
+    serializer = SettingsSerializer,
     produceMigrations = { context ->
-        listOf(SharedPreferencesMigration(context, "shared_preference"))
+        listOf(
+            SharedPreferencesMigration(
+                context,
+                "shared_preference"
+            ) { sharedPrefs: SharedPreferencesView, currentData: Settings ->
+                currentData
+                    .toBuilder()
+                    .setIntSharedPref(sharedPrefs.getInt("SharedIntValue", -1))
+                    .setStringSharedPref(sharedPrefs.getString("SharedStringValue", ""))
+                    .build()
+            }
+        )
     }
 )
 
@@ -54,6 +66,9 @@ class MainActivity : ComponentActivity() {
 
                     Greeting(
                         {
+                            saveSharedPreference()
+                        },
+                        {
                             scope.launch {
                                 savePreference()
                             }
@@ -72,49 +87,42 @@ class MainActivity : ComponentActivity() {
         sharedPreference.edit {
             putInt("SharedIntValue", 199)
             putString("SharedStringValue", "Migrated from shared preference")
-            putBoolean("SharedBooleanValue", false)
         }
     }
 
     private suspend fun savePreference() {
-        val intKey = intPreferencesKey("intKey")
-        val stringKey = stringPreferencesKey("stringKey")
-
-        dataStore.edit {
-            it[intKey] = 10
-            it[stringKey] = "My preference string"
+        dataStore.updateData { settings ->
+            settings.toBuilder()
+                .setIntSettings(7)
+                .setStringSettings("Proto String Settings")
+                .build()
         }
     }
 
     private suspend fun readPreference() {
-        val intKey = intPreferencesKey("intKey")
-        val stringKey = stringPreferencesKey("stringKey")
-
-        val intSharedPref = intPreferencesKey("SharedIntValue")
-        val stringSharedPref = stringPreferencesKey("SharedStringValue")
-        val booleanSharedPref = booleanPreferencesKey("SharedBooleanValue")
-
-        val pref = dataStore.data.first()
+        val settings = dataStore.data.first()
         Log.i("DEBUG", "-----")
-        Log.i("DEBUG", "int original DataStore value: ${pref[intKey]}")
-        Log.i("DEBUG", "string original DataStore value: ${pref[stringKey]}")
+        Log.i("DEBUG", "int original DataStore value: ${settings.intSettings}")
+        Log.i("DEBUG", "string original DataStore value: ${settings.stringSettings}")
         Log.i("DEBUG", "-----")
-        Log.i("DEBUG", "int migrated from SharedPref value: ${pref[intSharedPref]}")
-        Log.i("DEBUG", "string migrated from SharedPref value: ${pref[stringSharedPref]}")
-        Log.i("DEBUG", "boolean migrated from SharedPref value: ${pref[booleanSharedPref]}")
+        Log.i("DEBUG", "int migrated from SharedPref value: ${settings.intSharedPref}")
+        Log.i("DEBUG", "string migrated from SharedPref value: ${settings.stringSharedPref}")
         Log.i("DEBUG", "-----")
     }
 }
 
 @Composable
-fun Greeting(onSavePreference: () -> Unit, readPreference: () -> Unit) {
+fun Greeting(onSaveSharedPreference: () -> Unit, onSavePreference: () -> Unit, readPreference: () -> Unit) {
     Column(modifier = Modifier) {
+        Button(onClick = { onSaveSharedPreference() }) {
+            Text(text = "Save shared preference")
+        }
         Button(onClick = { onSavePreference() }) {
-            Text(text = "Save preference")
+            Text(text = "Save proto")
         }
         Spacer(modifier = Modifier.width(8.dp))
         Button(onClick = { readPreference() }) {
-            Text(text = "Read from preference")
+            Text(text = "Read from proto")
         }
     }
 }
@@ -123,6 +131,6 @@ fun Greeting(onSavePreference: () -> Unit, readPreference: () -> Unit) {
 @Composable
 fun DefaultPreview() {
     PlaygroundDatastoreTheme {
-        Greeting({ }, { })
+        Greeting({}, { }, { })
     }
 }
