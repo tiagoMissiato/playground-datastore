@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option java_package = "com.tiagomissiato.playgrounddatastore";
+option java_multiple_files = true;
+
+message Settings {
+    int32 int_settings = 1;
+    string string_settings = 2;
+}

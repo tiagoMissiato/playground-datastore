@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -14,24 +14,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.tiagomissiato.playgrounddatastore.customdata.Settings
-import com.tiagomissiato.playgrounddatastore.customdata.SettingsDataSource
-import com.tiagomissiato.playgrounddatastore.preferece.PreferenceDataSource
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tiagomissiato.playgrounddatastore.ui.theme.PlaygroundDatastoreTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-
+    @Inject
+    lateinit var preferencesDataStore: DataStore<Preferences>
 
     @Inject
-    lateinit var dataStore: PreferenceDataSource
-
-    @Inject
-    lateinit var settingsStore: SettingsDataSource
+    lateinit var protoDataStore: DataStore<Settings>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,51 +63,48 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun saveSettings() {
-        val newValues = Settings(
-                5,
-                "String",
-                listOf("1", "2")
-            )
-        settingsStore.save(newValues)
-        val settingsData = settingsStore.readSettings()
-        Log.i("DEBUG", "intParam ${settingsData.intParam}")
-        Log.i("DEBUG", "StringParam ${settingsData.stringParam}")
-        settingsData.listParam.forEachIndexed{ index, value ->
-            Log.i("DEBUG", "listParam[$index] $value")
+        protoDataStore.updateData { settings ->
+            settings
+                .toBuilder()
+                .setIntSettings(7)
+                .setStringSettings("Proto String Settings")
+                .build()
         }
+
+        val data = protoDataStore.data.first()
+
+        Log.i("DEBUG", "proto int value ${data.intSettings}")
+        Log.i("DEBUG", "proto string value ${data.stringSettings}")
     }
 
     private suspend fun savePreference() {
-        dataStore.saveInt("prefKeyInt", 5)
-        dataStore.saveString("prefKeyString", "6")
-        dataStore.saveBoolean("prefKeyBoolean", false)
+        val intKey = intPreferencesKey("prefKeyInt")
+        val stringKey = stringPreferencesKey("prefKeyString")
+        val booleanKey = booleanPreferencesKey("prefKeyBoolean")
 
-        Log.i("DEBUG", "prefKeyInt ${dataStore.readInt("prefKeyInt")}")
-        Log.i("DEBUG", "prefKeyInt ${dataStore.readString("prefKeyString")}")
-        Log.i("DEBUG", "prefKeyInt ${dataStore.readBoolean("prefKeyBoolean")}")
+        preferencesDataStore.edit { pref ->
+            pref[intKey] = 5
+            pref[stringKey] = "6"
+            pref[booleanKey] = false
+        }
 
-//        dataStore.edit {
-//            it[intPreferencesKey("prefKeyInt")] = 5
-//            it[stringPreferencesKey("prefKeyString")] = "5"
-//            it[booleanPreferencesKey("prefKeyBoolean")] = true
-//        }
-//        dataStore.data.collect {
-//            Log.i("DEBUG", "prefKeyInt ${it[intPreferencesKey("prefKeyInt")]}")
-//            Log.i("DEBUG", "prefKeyString ${it[stringPreferencesKey("prefKeyString")]}")
-//            Log.i("DEBUG", "prefKeyBoolean ${it[booleanPreferencesKey("prefKeyBoolean")]}")
-//        }
+        val data = preferencesDataStore.data.first()
+
+        Log.i("DEBUG", "prefKeyInt ${data[intKey]}")
+        Log.i("DEBUG", "prefKeyInt ${data[stringKey]}")
+        Log.i("DEBUG", "prefKeyInt ${data[booleanKey]}")
     }
 }
 
 @Composable
 fun Greeting(onSavePreference: () -> Unit, onSaveSettings: () -> Unit) {
-    Row(modifier = Modifier) {
+    Column(modifier = Modifier) {
         Button(onClick = { onSavePreference() }) {
-            Text(text = "Save preference")
+            Text(text = "Save data store preferences")
         }
 
         Button(onClick = { onSaveSettings() }) {
-            Text(text = "Save settings")
+            Text(text = "Save proto settings")
         }
     }
 }

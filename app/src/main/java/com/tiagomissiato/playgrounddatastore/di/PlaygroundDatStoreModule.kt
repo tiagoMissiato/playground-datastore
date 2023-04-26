@@ -3,11 +3,12 @@ package com.tiagomissiato.playgrounddatastore.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
-import com.tiagomissiato.playgrounddatastore.customdata.Settings
-import com.tiagomissiato.playgrounddatastore.customdata.SettingsSerializer
+import com.tiagomissiato.playgrounddatastore.Settings
+import com.tiagomissiato.playgrounddatastore.serializer.ProtoSerializer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,7 +22,7 @@ object PlaygroundDatStoreModule {
 
     @Singleton
     @Provides
-    fun providePreferenceDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+    fun providePreferencesDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
             produceFile = {
                 context.preferencesDataStoreFile("preference_file")
@@ -31,11 +32,11 @@ object PlaygroundDatStoreModule {
 
     @Singleton
     @Provides
-    fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Settings> {
+    fun provideProtoDataStore(@ApplicationContext context: Context): DataStore<Settings> {
         return DataStoreFactory.create(
-            serializer = SettingsSerializer(),
+            serializer = ProtoSerializer(),
             produceFile = {
-                context.preferencesDataStoreFile("preference_file_settings")
+                context.dataStoreFile("settings_proto")
             }
         )
     }
